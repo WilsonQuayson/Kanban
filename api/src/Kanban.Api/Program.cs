@@ -1,3 +1,7 @@
+using Kanban.Infrastructure.Data;
+using Kanban.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Kanban.Api
 {
@@ -7,26 +11,35 @@ namespace Kanban.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
+            // Controllers and OpenAPI
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+
+            // Database
+            builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // Identity
+            builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+                .AddEntityFrameworkStores<AppDbContext>();
+
+            builder.Services.AddAuthorization();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Kanban API v1"));
             }
 
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
-
             app.MapControllers();
+            app.MapGroup("/api/auth").MapIdentityApi<ApplicationUser>();
 
             app.Run();
         }
